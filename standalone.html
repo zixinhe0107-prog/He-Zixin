@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TalentFlow - Standalone Recruitment Assistant</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Mammoth.js (Word) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .brand-gradient {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="text-slate-800">
+    <div id="app" class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="brand-gradient text-white py-6 px-8 shadow-lg">
+            <div class="max-w-7xl mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white p-2 rounded-xl">
+                        <i data-lucide="briefcase" class="text-blue-600 w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight">TalentFlow</h1>
+                        <p class="text-blue-100 text-xs font-medium uppercase tracking-widest">Standalone Recruitment Assistant</p>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center gap-6 text-sm font-medium">
+                    <a href="#" class="hover:text-blue-200 transition-colors">Dashboard</a>
+                    <a href="#" class="hover:text-blue-200 transition-colors">Talent Pool</a>
+                    <a href="#" class="hover:text-blue-200 transition-colors">Settings</a>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl mx-auto w-full p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Left Column: Configuration -->
+            <div class="lg:col-span-4 space-y-6">
+                <!-- Job Description Section -->
+                <div class="bg-white rounded-3xl p-6 border border-slate-200 card-shadow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                            <i data-lucide="file-text" class="w-5 h-5"></i>
+                        </div>
+                        <h2 class="font-bold text-lg">Job Description</h2>
+                    </div>
+                    <textarea 
+                        id="jd-input"
+                        class="w-full h-48 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm resize-none custom-scrollbar"
+                        placeholder="Paste the job description here..."
+                    ></textarea>
+                </div>
+
+                <!-- Resume Upload Section -->
+                <div class="bg-white rounded-3xl p-6 border border-slate-200 card-shadow">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                            <i data-lucide="upload" class="w-5 h-5"></i>
+                        </div>
+                        <h2 class="font-bold text-lg">Upload Resumes</h2>
+                    </div>
+                    
+                    <div 
+                        id="drop-zone"
+                        class="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer group"
+                    >
+                        <input type="file" id="file-input" multiple class="hidden" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png">
+                        <div class="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                            <i data-lucide="plus" class="text-slate-400 group-hover:text-blue-500"></i>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-600">Click or drag resumes</p>
+                        <p class="text-xs text-slate-400 mt-1">Supports PDF, Word, TXT, Images</p>
+                    </div>
+
+                    <!-- File List -->
+                    <div id="file-list" class="mt-4 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                        <!-- Files will appear here -->
+                    </div>
+
+                    <button 
+                        id="analyze-btn"
+                        class="w-full mt-6 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        disabled
+                    >
+                        <i data-lucide="zap" class="w-4 h-4"></i>
+                        Analyze Candidates
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: Results -->
+            <div class="lg:col-span-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-slate-900">Analysis Results</h2>
+                    <div id="stats-badge" class="hidden px-4 py-1.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-100">
+                        0 Candidates Analyzed
+                    </div>
+                </div>
+
+                <div id="results-container" class="space-y-6">
+                    <!-- Empty State -->
+                    <div id="empty-state" class="bg-white rounded-3xl p-12 border border-dashed border-slate-200 text-center">
+                        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i data-lucide="users" class="text-slate-300 w-10 h-10"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">No Analysis Yet</h3>
+                        <p class="text-slate-500 text-sm max-w-xs mx-auto">Upload resumes and provide a job description to see intelligent matching results.</p>
+                    </div>
+
+                    <!-- Analysis Cards will be injected here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-sm w-full mx-4">
+                <div class="relative w-20 h-20 mx-auto mb-6">
+                    <div class="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <i data-lucide="brain" class="text-blue-600 w-8 h-8"></i>
+                    </div>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900 mb-2">Analyzing Resumes</h3>
+                <p id="loading-text" class="text-slate-500 text-sm">Extracting skills and calculating match scores...</p>
+                
+                <div class="mt-6 w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-blue-600 transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="py-8 text-center text-slate-400 text-xs border-t border-slate-100 bg-white">
+            <p>&copy; 2024 TalentFlow Standalone. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // State Management
+        let files = [];
+        let analysisResults = [];
+
+        // DOM Elements
+        const jdInput = document.getElementById('jd-input');
+        const fileInput = document.getElementById('file-input');
+        const dropZone = document.getElementById('drop-zone');
+        const fileList = document.getElementById('file-list');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const resultsContainer = document.getElementById('results-container');
+        const emptyState = document.getElementById('empty-state');
+        const statsBadge = document.getElementById('stats-badge');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        const progressBar = document.getElementById('progress-bar');
+
+        // Event Listeners
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-400', 'bg-blue-50/30');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-400', 'bg-blue-50/30');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-400', 'bg-blue-50/30');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        jdInput.addEventListener('input', validateInputs);
+
+        analyzeBtn.addEventListener('click', startAnalysis);
+
+        function handleFiles(newFiles) {
+            for (let file of newFiles) {
+                if (!files.some(f => f.name === file.name && f.size === file.size)) {
+                    files.push(file);
+                }
+            }
+            renderFileList();
+            validateInputs();
+        }
+
+        function removeFile(index) {
+            files.splice(index, 1);
+            renderFileList();
+            validateInputs();
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = '';
+            files.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group';
+                div.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <i data-lucide="file" class="w-4 h-4 text-blue-500 flex-shrink-0"></i>
+                        <span class="text-xs font-medium text-slate-700 truncate">${file.name}</span>
+                    </div>
+                    <button onclick="removeFile(${index})" class="text-slate-400 hover:text-red-500 transition-colors">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                `;
+                fileList.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function validateInputs() {
+            const hasJD = jdInput.value.trim().length > 10;
+            const hasFiles = files.length > 0;
+            analyzeBtn.disabled = !(hasJD && hasFiles);
+        }
+
+        async function startAnalysis() {
+            const jd = jdInput.value.trim();
+            loadingOverlay.classList.remove('hidden');
+            analysisResults = [];
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const progress = ((i + 1) / files.length) * 100;
+                progressBar.style.width = `${progress}%`;
+                loadingText.innerText = `Parsing ${file.name}...`;
+                
+                try {
+                    const text = await extractText(file);
+                    const analysis = simulateAnalysis(text, jd);
+                    analysisResults.push({
+                        fileName: file.name,
+                        candidateName: extractName(text) || file.name.split('.')[0],
+                        ...analysis
+                    });
+                } catch (err) {
+                    console.error(`Error processing ${file.name}:`, err);
+                    analysisResults.push({
+                        fileName: file.name,
+                        candidateName: file.name.split('.')[0],
+                        fitScore: 0,
+                        summary: "Error: Could not parse this file format.",
+                        skillsAnalysis: [],
+                        redFlags: ["File parsing failed"]
+                    });
+                }
+                
+                // Small delay for visual effect
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            renderResults();
+            loadingOverlay.classList.add('hidden');
+            progressBar.style.width = '0%';
+        }
+
+        async function extractText(file) {
+            const extension = file.name.split('.').pop().toLowerCase();
+            
+            if (extension === 'txt') {
+                return await file.text();
+            } else if (extension === 'pdf') {
+                return await extractTextFromPDF(file);
+            } else if (extension === 'docx' || extension === 'doc') {
+                return await extractTextFromWord(file);
+            } else if (['jpg', 'jpeg', 'png'].includes(extension)) {
+                return "IMAGE_FILE: Text extraction from images is not supported in this standalone version. Please use PDF or TXT for best results.";
+            }
+            return "";
+        }
+
+        async function extractTextFromPDF(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = "";
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    fullText += content.items.map(item => item.str).join(" ") + "\n";
+                }
+                return fullText;
+            } catch (e) {
+                throw new Error("PDF parsing failed");
+            }
+        }
+
+        async function extractTextFromWord(file) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const result = await mammoth.extractRawText({ arrayBuffer });
+                return result.value;
+            } catch (e) {
+                throw new Error("Word parsing failed");
+            }
+        }
+
+        function extractName(text) {
+            // Very simple name extraction heuristic
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length > 0) {
+                // Usually the first line is the name
+                const firstLine = lines[0];
+                if (firstLine.length < 30 && /^[A-Z][a-z]+(\s[A-Z][a-z]+)+/.test(firstLine)) {
+                    return firstLine;
+                }
+            }
+            return null;
+        }
+
+        function simulateAnalysis(resumeText, jdText) {
+            const jdKeywords = jdText.toLowerCase().match(/\b(\w{3,})\b/g) || [];
+            const resumeKeywords = resumeText.toLowerCase().match(/\b(\w{3,})\b/g) || [];
+            
+            // Common tech skills to look for
+            const commonSkills = [
+                'react', 'vue', 'angular', 'javascript', 'typescript', 'node', 'python', 'java', 'c++', 'aws', 'azure', 'docker', 'kubernetes',
+                'sql', 'nosql', 'mongodb', 'postgresql', 'tailwind', 'css', 'html', 'git', 'agile', 'scrum', 'project management', 'ui', 'ux',
+                'figma', 'adobe', 'marketing', 'sales', 'customer success', 'hr', 'finance', 'accounting'
+            ];
+
+            const foundSkills = commonSkills.filter(skill => resumeText.toLowerCase().includes(skill));
+            const matchingSkills = foundSkills.filter(skill => jdText.toLowerCase().includes(skill));
+            
+            // Calculate score based on matching skills and keyword density
+            let score = 0;
+            if (matchingSkills.length > 0) {
+                score = Math.min(95, 40 + (matchingSkills.length * 10));
+            } else {
+                // Fallback to basic keyword matching
+                const uniqueJDKeywords = new Set(jdKeywords);
+                let matches = 0;
+                uniqueJDKeywords.forEach(word => {
+                    if (resumeText.toLowerCase().includes(word)) matches++;
+                });
+                score = Math.min(85, Math.floor((matches / uniqueJDKeywords.size) * 100));
+            }
+
+            // Ensure score is reasonable
+            score = Math.max(15, score);
+
+            // Generate summary
+            let summary = "";
+            if (score > 80) {
+                summary = "Excellent match. The candidate demonstrates strong proficiency in core requirements and has a background that aligns perfectly with the role.";
+            } else if (score > 60) {
+                summary = "Good match. The candidate has most of the required skills but may need some onboarding for specific tools or advanced concepts.";
+            } else {
+                summary = "Potential match. The candidate has foundational knowledge but lacks direct experience with several key technologies mentioned in the JD.";
+            }
+
+            // Red flags
+            const redFlags = [];
+            if (resumeText.length < 200) redFlags.push("Resume is unusually short");
+            if (matchingSkills.length === 0) redFlags.push("No direct skill matches found");
+            if (resumeText.includes("IMAGE_FILE")) redFlags.push("Image-based resume (limited parsing)");
+
+            return {
+                fitScore: score,
+                summary: summary,
+                skillsAnalysis: foundSkills.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+                redFlags: redFlags.length > 0 ? redFlags : ["No major red flags identified"]
+            };
+        }
+
+        function renderResults() {
+            emptyState.classList.add('hidden');
+            statsBadge.classList.remove('hidden');
+            statsBadge.innerText = `${analysisResults.length} Candidates Analyzed`;
+            
+            resultsContainer.innerHTML = '';
+            
+            // Sort by score
+            analysisResults.sort((a, b) => b.fitScore - a.fitScore);
+
+            analysisResults.forEach(result => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-3xl p-8 border border-slate-200 card-shadow hover:border-blue-300 transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500';
+                
+                const scoreColor = getScoreColor(result.fitScore);
+                
+                card.innerHTML = `
+                    <div class="flex flex-col md:flex-row justify-between gap-6 mb-6">
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-2xl group-hover:scale-110 transition-transform">
+                                ${result.candidateName[0]}
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900">${result.candidateName}</h3>
+                                <p class="text-slate-400 text-xs flex items-center gap-1">
+                                    <i data-lucide="file" class="w-3 h-3"></i> ${result.fileName}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <div class="text-4xl font-black ${scoreColor}">
+                                ${result.fitScore}<span class="text-lg font-bold opacity-50">%</span>
+                            </div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Match Score</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                <i data-lucide="sparkles" class="text-blue-500 w-4 h-4"></i> Summary
+                            </h4>
+                            <p class="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 italic">
+                                "${result.summary}"
+                            </p>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                                <i data-lucide="check-circle" class="text-emerald-500 w-4 h-4"></i> Key Skills
+                            </h4>
+                            <div class="flex flex-wrap gap-2">
+                                ${result.skillsAnalysis.length > 0 
+                                    ? result.skillsAnalysis.map(skill => `<span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-lg border border-emerald-100">${skill}</span>`).join('')
+                                    : '<span class="text-xs text-slate-400 italic">No specific skills extracted</span>'
+                                }
+                            </div>
+                            
+                            <h4 class="text-sm font-bold text-slate-900 mt-6 mb-3 flex items-center gap-2">
+                                <i data-lucide="alert-triangle" class="text-amber-500 w-4 h-4"></i> Considerations
+                            </h4>
+                            <ul class="space-y-2">
+                                ${result.redFlags.map(flag => `
+                                    <li class="flex items-start gap-2 text-xs text-slate-500">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0"></span>
+                                        ${flag}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 pt-6 border-t border-slate-100 flex justify-between items-center">
+                        <div class="flex gap-2">
+                            <button class="px-5 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-all">Schedule Interview</button>
+                            <button class="px-5 py-2 border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-50 transition-all">View Full Profile</button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 italic">Simulated analysis based on keyword density</p>
+                    </div>
+                `;
+                resultsContainer.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function getScoreColor(score) {
+            if (score >= 80) return 'text-emerald-500';
+            if (score >= 60) return 'text-blue-500';
+            if (score >= 40) return 'text-amber-500';
+            return 'text-rose-500';
+        }
+
+        // Configure PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+</body>
+</html>
